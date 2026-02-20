@@ -1,0 +1,27 @@
+# config.yaml
+# Archivo de configuración principal (NO SECRETO)
+
+app:
+  name: "KDD Conversacional"
+  version: "0.2.0"
+  debug: false
+
+llm:
+  # Framework de agente conversacional (langgraph o langchain)
+  ai_framework: "langgraph"
+  
+  # Proveedor de modelo (ollama, openai, mistral, etc.)
+  provider: "openai"                 # Puede ser "openai", "ollama", o "mistral"
+  
+  # Nombre del modelo a instanciar (debe tener soporte nativo de function calling)
+  model_name: "gpt-4o-mini"          # gpt-4o, gpt-4o-mini
+  
+  # Configuración base de generación
+  temperature: 0.0
+  max_tokens: 2000
+
+observability:
+  # Activar métricas en LangSmith via LANGCHAIN_TRACING_V2
+  enable_langsmith: false
+  
+# Nota: La URL del servidor Ollama por defecto asume `http://localhost:11434`

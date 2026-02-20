@@ -9,6 +9,7 @@ class KDDSession(BaseModel):
     current_phase: str = "1_understanding_problem" # Fase inicial
     dataset_context: Optional[Dict[str, Any]] = None
     chat_history: list = Field(default_factory=list)
+    artifacts: list = Field(default_factory=list)
 
 class SessionManager:
     """Gestor simple de sesiones en memoria para la Fase 1"""

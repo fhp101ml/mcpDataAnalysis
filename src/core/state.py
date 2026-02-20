@@ -12,8 +12,10 @@ class KDDState(TypedDict):
     - current_phase: Fase actual del KDD.
     - dataset_context: Información estructural del dataset (columnas, tipos).
     - user_goal: El objetivo general (ej: exploración, predicción, agrupamiento).
+    - artifacts: Lista de diccionarios con metadatos de archivos guardados (paths).
     """
     messages: Annotated[list[BaseMessage], add_messages]
     current_phase: str
     dataset_context: Dict[str, Any] | None
     user_goal: str | None
+    artifacts: List[Dict[str, str]] | None

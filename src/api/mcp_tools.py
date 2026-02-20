@@ -23,72 +23,125 @@ class SandboxMCPTool:
     @classmethod
     def get_client(cls):
         if cls._client is None:
-            cls._client = docker.from_env()
+            # En Linux (Snap) DEBEMOS usar unix:// porque from_env() hereda scheme rotos.
+            docker_host = os.environ.get("DOCKER_HOST", "unix:///var/run/docker.sock")
+            cls._client = docker.DockerClient(base_url=docker_host)
         return cls._client
 
     @staticmethod
-    async def execute_python_code(code: str, dataset_path: str = None) -> MCPToolResponse:
-        """
-        Ejecuta python en el sandbox aislado.
-        
-        Args:
-            code (str): El código Python a ejecutar.
-            dataset_path (str): (Pendiente) Ruta a un dataset local para montar.
-        """
+    def _run_docker_sync(python_code: str) -> Dict[str, Any]:
+        """Versión síncrona aislada para ejecutarse en ThreadPool"""
         client = SandboxMCPTool.get_client()
+        tmp_dir = tempfile.mkdtemp(prefix="kdd_sandbox_")
         
-        # Guardamos el código en un archivo temporal para montarlo
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as temp_script:
-            temp_script.write(code)
-            temp_script_path = temp_script.name
-
         try:
-            logger.info("Iniciando ejecución de código en sandbox...")
-            logger.debug(f"Código a ejecutar: {code}")
-            
-            # TODO: Fase 3 - Añadir volúmenes para pasar datasets al contenedor
-            # volumes = {dataset_dir: {'bind': '/data', 'mode': 'ro'}} si aplicara
-            
-            # Ejecutamos el contenedor con el script montado
+            script_path = os.path.join(tmp_dir, "script.py")
+            with open(script_path, "w") as f:
+                f.write(python_code)
+
             container = client.containers.run(
-                image="kdd-sandbox",
-                command=["python", "/script.py"],
-                volumes={temp_script_path: {'bind': '/script.py', 'mode': 'ro'}},
-                remove=True,        # Autodestruir al terminar
-                network_disabled=True, # Sin internet
-                mem_limit="512m",   # Limitar memoria (aplica a Fase 12, pero es buena práctica inicial)
-                user="sandboxuser", # Usuario sin privilegios
-                stdout=True,
-                stderr=True
+                "kdd-sandbox:latest",
+                command=["python", "/app/script.py"],
+                volumes={
+                    tmp_dir: {'bind': '/app', 'mode': 'ro'},
+                    os.path.abspath("sandbox/datasets"): {'bind': '/sandbox/datasets', 'mode': 'rw'}
+                },
+                remove=False,
+                detach=True,  # Necesitamos detach=True para que devuelva el obj Container
+                mem_limit="512m",
+                network_disabled=True 
             )
             
-            # Decodificamos la salida generada
-            output = container.decode('utf-8')
-            logger.info("Ejecución en sandbox exitosa.")
+            # Bloquear la ejecución hasta que acaba
+            exit_status = container.wait()
             
-            return MCPToolResponse(
-                success=True,
-                data={"stdout": output, "stderr": ""},
-            )
+            # Extraer strings
+            output = container.logs().decode("utf-8")
+            
+            # Limpiar manualmente
+            container.remove(force=True)
+            
+            if exit_status.get("StatusCode", 0) != 0:
+                 return {"error": output}
+                 
+            return {"output": output}
             
         except docker.errors.ContainerError as e:
-            # Captura errores en el código Python ejecutado (SyntaxError, etc)
-            error_output = e.stderr.decode('utf-8') if e.stderr else str(e)
-            logger.warning(f"Error de ejecución dentro del código Python: {error_output}")
-            return MCPToolResponse(
-                success=False,
-                data={"stdout": "", "stderr": error_output},
-                error="El script Python devolvió un error de ejecución."
-            )
+            err_msg = e.container.logs().decode("utf-8")
+            e.container.remove(force=True)
+            return {"error": err_msg}
         except Exception as e:
-            # Errores generales de Docker o Sistema
-            logger.error(f"Error general en el daemon de Docker: {str(e)}")
-            return MCPToolResponse(
-                success=False,
-                data={"stdout": "", "stderr": ""},
-                error=f"Error en el Sandbox: {str(e)}"
-            )
+            return {"error": str(e)}
         finally:
-            # Limpieza del script temporal
-            if os.path.exists(temp_script_path):
-                os.remove(temp_script_path)
+            import shutil
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    @staticmethod
+    async def execute_python_code(python_code: str) -> MCPToolResponse:
+        """
+        Versión asíncrona segura que delega a un hilo secundario 
+        para evitar el bloqueo del event loop.
+        """
+        import asyncio
+        logger.info("Iniciando ejecución de código en sandbox...")
+        logger.debug(f"Código a ejecutar: {python_code}")
+        
+        # Ejecutar de forma aislada
+        result = await asyncio.to_thread(SandboxMCPTool._run_docker_sync, python_code)
+        
+        if "error" in result:
+            logger.error(f"Error en sandbox: {result['error']}")
+            return MCPToolResponse(success=False, data={"stdout": "", "stderr": result["error"]}, error=result["error"])
+            
+        return MCPToolResponse(success=True, data={"stdout": result["output"], "stderr": ""})
+
+    @staticmethod
+    async def run_data_profiling(dataset_filename: str) -> MCPToolResponse:
+        """
+        Ejecuta el EDA automático de ydata-profiling sobre un dataset específico 
+        dentro del contenedor (asumiendo que está montado en /sandbox/datasets/)
+        """
+        python_code = f'''
+import pandas as pd
+from ydata_profiling import ProfileReport
+import json
+
+try:
+    # Ruta relativa dentro del docker
+    file_path = f"/sandbox/datasets/{dataset_filename}"
+    df = pd.read_csv(file_path)
+    
+    # Perfilamos de manera optimizada (minimal=True evita matrices muy pesadas para LLMs)
+    profile = ProfileReport(df, title="KDD Auto-EDA", minimal=True)
+    
+    # 1. Generamos info estadística en JSON a variable
+    json_data = profile.to_json()
+    
+    # 2. Guardamos persistencia física (JSON y HTML)
+    base_name = "{dataset_filename}".replace(".csv", "")
+    profile.to_file(f"/sandbox/datasets/{{base_name}}_profile.html")
+    with open(f"/sandbox/datasets/{{base_name}}_profile.json", "w") as f:
+         f.write(json_data)
+         
+    print("PROFILING_SUCCESS")
+    print(json_data)
+except Exception as e:
+    import sys
+    print(f"PROFILING_ERROR: {{str(e)}}", file=sys.stderr)
+    sys.exit(1)
+'''
+        
+        response = await SandboxMCPTool.execute_python_code(python_code)
+        
+        # Parseando la salida para un uso lógico por el agente conversacional
+        if response.success and "PROFILING_SUCCESS" in response.data.get("stdout", ""):
+            stdout = response.data.get("stdout", "")
+            try:
+                # Separamos por el token exacto que pusimos antes del print
+                json_part = stdout.split("PROFILING_SUCCESS")[1].strip()
+                response.data["profiling_json"] = json_part
+            except Exception as e:
+                logger.error(f"Error parseando el output del profiling: {e}")
+                response.data["profiling_json"] = "{}"
+                
+        return response

@@ -35,39 +35,38 @@ El valor principal del sistema no radica únicamente en el dashboard final, sino
 **Capacidades:** Upload CSV, Perfilado automático, Identificación de tipos, Evaluación de calidad, Resumen interpretado.
 **Resultado:** Dataset contextualizado.
 
-### 🟢 Fase 4 — Guía conversacional del proceso KDD
+### 🟢 Fase 4 — Interfaz Gráfica de Usuario (Web UI)
+**Objetivo:** Permitir al experto interactuar con el flujo sin usar la terminal.
+**Qué se implementa:** Cliente Streamlit asíncrono, renderizado the componentes HTML (Reportes YData) y subida de archivos al Sandbox.
+
+### 🟢 Fase 5 — Guía conversacional del proceso KDD
 **Objetivo:** Que el sistema actúe como facilitador metodológico.
 **Qué se implementa:** Flujo guiado, Preguntas inteligentes, Propuestas de pasos.
 
-### 🟢 Fase 5 — Ejecución de análisis exploratorio automático
+### 🟢 Fase 6 — Ejecución de análisis exploratorio automático (EDA ampliado)
 **Objetivo:** EDA profundo generado dinámicamente.
-**Capacidades:** Estadística descriptiva, Missing analysis, Outliers, Correlaciones, Visualizaciones.
+**Capacidades:** Estadística descriptiva a demanda, Correlaciones avanzadas, Outliers dinámicos por el Sandbox.
 
-### 🟢 Fase 6 — Preparación de datos y feature engineering
-**Objetivo:** Construir pipeline reproducible.
-**Qué incluye:** Limpieza, Imputación, Codificación, Feature creation.
+### 🟢 Fase 7 — Agente Generador y Linaje de Datos con MinIO
+**Objetivo:** Construir pipeline reproducible y versionado de Data.
+**Qué incluye:** Nodos capaces the inyectar código Pandas real, Tracking en el `KDDState` y volcado the datos mutables a Buckets de MinIO.
 
-### 🟢 Fase 7 — Modelado y descubrimiento de patrones
-**Objetivo:** Extraer conocimiento.
-**Capacidades:** Baseline ML, Comparación de modelos, Evaluación.
+### 🟢 Fase 8 — Modelado y descubrimiento de patrones
+**Objetivo:** Extraer conocimiento y baseline predictors.
 
-### 🟢 Fase 8 — Síntesis automática del conocimiento
-**Objetivo:** Convertir análisis en narrativa coherente.
-**Qué se construye:** Resumen interpretativo, Hallazgos clave, Limitaciones.
-
-### 🟢 Fase 9 — Generador automático de dashboard
-**Objetivo:** Generar la interfaz final interactiva.
-**Qué hace el sistema:** Decide qué paneles incluir, Genera layout, Inserta visualizaciones.
+### 🟢 Fase 9 — Síntesis automática del conocimiento
+**Objetivo:** Convertir análisis en narrativa coherente a los usuarios del KDD.
 
 ### 🟢 Fase 10 — Dashboard como artefacto vivo
 **Objetivo:** Permitir iteración.
-**Capacidades:** Modificar paneles vía chat, Añadir gráficos.
+**Capacidades:** Modificar paneles vía chat, Añadir gráficos de Plotly u otras librerías.
 
 ### 🟢 Fase 11 y 12 — Sandbox Alternativo y Robustez
-**Objetivo:** Seguridad, logging, auditoria y opciones langchain extra.
+**Objetivo:** Seguridad, logging, auditoria y alternativas LangChain.
 
 ---
 
 ## Historial de Versiones
-- **v0.2.0** (Actual): Infraestructura Docker y Arquitectura LangGraph completada. Carga de entornos integradas.
+- **v0.3.0** (Actual): Fase 3 (Ingestión asíncrona y Pefilado con YData en Sandbox) y Fase 4 (UI en Streamlit con Reportes Interactivos) completadas.
+- **v0.2.0**: Infraestructura Docker y Arquitectura LangGraph completada. Carga de entornos integradas.
 - **v0.1.0**: Definición de la idea inicial, objetivos y fases del proyecto.

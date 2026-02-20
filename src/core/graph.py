@@ -7,8 +7,10 @@ from src.core.state import KDDState
 from src.core.nodes import (
     router_node, 
     goal_definition_node, 
+    data_profiling_node,
     fallback_responder_node,
-    PHASE_UNDERSTANDING
+    PHASE_UNDERSTANDING,
+    PHASE_PROFILING
 )
 
 # Constructor del Grafo para el flujo KDD
@@ -17,11 +19,12 @@ workflow = StateGraph(KDDState)
 # 1. Añadiendo los Nodos de Trabajo
 workflow.add_node("router", router_node)
 workflow.add_node("goal_agent", goal_definition_node)
+workflow.add_node("profiling_agent", data_profiling_node)
 workflow.add_node("generic_agent", fallback_responder_node)
 
 
 # Lógica de enrutamiento inicial basado en la fase
-def route_to_phase(state: KDDState) -> Literal["goal_agent", "generic_agent"]:
+def route_to_phase(state: KDDState) -> Literal["goal_agent", "profiling_agent", "generic_agent"]:
     """
     Decide a qué agente secundario (nodo) redirigir la conversación 
     en función de la fase actual guardada en el estado.
@@ -29,12 +32,15 @@ def route_to_phase(state: KDDState) -> Literal["goal_agent", "generic_agent"]:
     current_phase = state.get("current_phase", PHASE_UNDERSTANDING)
     if current_phase == PHASE_UNDERSTANDING:
         return "goal_agent"
+    elif current_phase == PHASE_PROFILING:
+        return "profiling_agent"
     return "generic_agent"
 
 # 2. Definiendo las Aristas y Flujo Direccional
 workflow.add_edge(START, "router")
 workflow.add_conditional_edges("router", route_to_phase)
 workflow.add_edge("goal_agent", END)
+workflow.add_edge("profiling_agent", END)
 workflow.add_edge("generic_agent", END)
 
 # Compilación
