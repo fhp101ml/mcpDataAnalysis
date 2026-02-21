@@ -25,6 +25,7 @@ htmlcov/
 .vscode/
 .idea/
 
+
 # SO
 .DS_Store
 src/.env
@@ -33,3 +34,6 @@ src/.env
 *.csv
 *.html
 *.json
+*.sqlite
+*.png
+sandbox/datasets/
