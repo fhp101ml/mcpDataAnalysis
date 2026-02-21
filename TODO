@@ -1,0 +1,6 @@
+[x] Refactorizar flujo conversación: Nodo 'Comprensión del Problema' debe ir DESPUÉS de la subida/perfilado automático. La IA debe leer el perfilado y sugerir objetivos/guía de próximos pasos.
+[ ] json eda automático dividir para enviar a distintos llm
+[ ] especializaciń agentes
+[x] integrar Checkpointer (SqliteSaver) en LangGraph (src/core/graph.py) para memoria persistente y Time Travel
+
+USO DE MLFLOW
