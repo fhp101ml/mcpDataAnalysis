@@ -3,6 +3,10 @@
 ## Descripción del Proyecto
 Sistema conversacional que acompaña al usuario durante todo el proceso de Descubrimiento de Conocimiento en Datos (KDD). Funciona como un copiloto analítico, facilitador metodológico y orquestador del workflow que guía al usuario mediante lenguaje natural, ejecuta análisis de forma automática y culmina con la generación autónoma de un dashboard interactivo que sintetiza resultados, insights y modelos.
 
+### El Horizonte MCP (Model Context Protocol)
+El objetivo final arquitectónico de la aplicación transciende su interfaz web (`Streamlit`). Una vez que el ciclo KDD esté totalmente operativo y el motor de agentes sea infalible, **se creará una versión independiente exponiendo el sistema íntegramente como un servicio MCP**.
+Esto significa que el proyecto actuará como un "Agente KDD Universal" conectable a cualquier ecosistema de IA corporativo o cliente compatible (como *Claude Desktop* o *Cursor*), permitiéndoles usar a nuestro experto en datos como si fuera una simple función o comando a la que delegarle la ingesta, análisis y creación de modelos de Machine Learning dentro del Sandbox aislado, devolviendo los *insights* y *artefactos* extraídos al agente principal.
+
 ## Arquitectura del Motor Conversacional (Agentes)
 
 El corazón conversacional de la aplicación funciona como una máquina de estados orquestada por **LangGraph**. A diferencia de un chatbot tradicional lineal, el sistema actúa como un grupo de agentes especialistas organizados por un **Router**:
