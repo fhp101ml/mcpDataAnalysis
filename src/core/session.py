@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 class KDDSession(BaseModel):
     session_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    current_phase: str = "1_understanding_problem" # Fase inicial
+    current_phase: str = "1_data_profiling" # Fase inicial alineada con el nuevo flujo
     dataset_context: Optional[Dict[str, Any]] = None
     chat_history: list = Field(default_factory=list)
     artifacts: list = Field(default_factory=list)

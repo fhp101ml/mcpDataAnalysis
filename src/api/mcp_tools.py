@@ -142,6 +142,45 @@ except Exception as e:
                 response.data["profiling_json"] = json_part
             except Exception as e:
                 logger.error(f"Error parseando el output del profiling: {e}")
-                response.data["profiling_json"] = "{}"
-                
         return response
+
+from langchain_core.tools import tool
+
+@tool
+def execute_pandas_code(python_code: str, dataset_filename: str) -> str:
+    """
+    Ejecuta código Python/Pandas en un entorno seguro (Sandbox) para explorar y analizar un dataset.
+    
+    INSTRUCCIONES DE USO PARA EL LLM:
+    1. Debes importar pandas (y matplotlib/seaborn si quieres dibujar).
+    2. El CSV del dataset está ubicado SIEMPRE en la ruta absoluta: f"/sandbox/datasets/{dataset_filename}"
+    3. RECUERDA: Si quieres leer resultados numéricos (ej. `df.head()`, `df.info()`), DEBES envolver la llamada en `print()` como `print(df.head())`, de otra forma tu output de Python será vacío y no podrás enterarte de nada.
+    4. IMPORTANTE PARA ARCHIVOS CREADOS: NO uses plt.show(). Si generas un gráfico (.png) o un nuevo CSV, guárdalo usando la ruta `/sandbox/datasets/...` y luego IMPRIME OBLIGATORIAMENTE en stdout una etiqueta exacta con este formato: `[ARTIFACT:/sandbox/datasets/tu_archivo.ext]` para que el sistema interactivo lo intercepte. Para mostrar el gráfico en el chat usa a su vez `![GRAFICO](/sandbox/datasets/tu_archivo.ext)`.
+    """
+    # Llama síncronamente al runner
+    # Limpiamos los saltos de línea literales (\\n) producidos por el parseo JSON de Langchain
+    python_code = python_code.replace("\\n", "\n").replace("\\t", "\t")
+    
+    # Nota: LangChain tools en general funcionan mejor síncronas bajo ainvoke(con hilos) o podemos usar la async def.
+    # Aquí encapsulamos la llamada asíncrona en un small event loop para compatibilidad con AgentExecutor/Graph.
+    import asyncio
+    
+    # Tratamiento seguro asíncrono desde el tool síncrono
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+        
+    if loop and loop.is_running():
+        # Estamos en un thread asíncrono (LangGraph ainvoke), necesitamos delegar al root o crear un task
+        # Como es bloqueante para el Node, lanzamos la versión puramente thread-sync heredada
+        result = SandboxMCPTool._run_docker_sync(python_code)
+    else:
+        result = asyncio.run(SandboxMCPTool.execute_python_code(python_code))
+        if isinstance(result, MCPToolResponse):
+            result = {"output": result.data.get("stdout",""), "error": result.data.get("stderr","")} if result.success else {"error": result.error}
+            
+    if "error" in result and result["error"]:
+        return f"ERROR AL EJECUTAR:\n{result['error']}"
+    
+    return f"RESULTADO DE LA EJECUCIÓN:\n{result.get('output', '')}"

@@ -27,3 +27,9 @@ htmlcov/
 
 # SO
 .DS_Store
+src/.env
+.env
+\nsrc/.env
+*.csv
+*.html
+*.json

@@ -20,6 +20,52 @@ El valor principal del sistema no radica únicamente en el dashboard final, sino
 - Mejora la interpretación de los resultados.
 - Educa y enseña al usuario durante la exploración.
 
+## Instalación y Ejecución Local
+
+Para reproducir este sistema en local, se recomienda el uso de `pyenv` para preservar la pureza del entorno de desarrollo.
+
+### Pre-requisitos
+- Python 3.12.3 (Configurado a través de `pyenv`)
+- Docker Desktop / Engine (Activo en segundo plano para el Sandbox Analítico)
+
+### 1. Preparación del Entorno
+```bash
+# 1. Configurar la versión correcta de Python
+pyenv local 3.12.3
+
+# 2. Crear entorno virtual
+python -m venv .venv
+source .venv/bin/activate
+
+# 3. Instalar librerías
+pip install -r requirements.txt
+```
+
+### 2. Variables de Entorno
+Es imprescindible crear un archivo `src/.env` y, opcionalmente, `.env` en la raíz del proyecto para definir las claves base de los LLM que alimentan LangGraph. Un ejemplo del archivo (o su plantilla `.env.example` si existe) sería:
+```ini
+OPENAI_API_KEY=sk-....
+MISTRAL_API_KEY=your_key_here
+```
+
+### 3. Ejecución Paralela
+El sistema utiliza una arquitectura bi-modal manual para depuración. Se requieren dos terminales abiertas:
+
+**Terminal 1: Iniciar el Motor Inteligente KDD (FastAPI)**
+Conserva el contexto, la memoria SQLite de las sesiones, y el enrutamiento LangGraph.
+```bash
+source .venv/bin/activate
+uvicorn src.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+**Terminal 2: Iniciar la Interfaz de Usuario Experto (Streamlit)**
+Levanta la SPA que interactúa con el backend consumiendo los endpoints REST.
+```bash
+source .venv/bin/activate
+streamlit run src/ui/app.py
+```
+Accede posteriormente por navegador web a `http://localhost:8501`.
+
 ## Fases de Construcción del Sistema
 
 ### 🟢 Fase 1 — Fundaciones del sistema (infraestructura base)
@@ -39,17 +85,32 @@ El valor principal del sistema no radica únicamente en el dashboard final, sino
 **Objetivo:** Permitir al experto interactuar con el flujo sin usar la terminal.
 **Qué se implementa:** Cliente Streamlit asíncrono, renderizado the componentes HTML (Reportes YData) y subida de archivos al Sandbox.
 
-### 🟢 Fase 5 — Guía conversacional del proceso KDD
-**Objetivo:** Que el sistema actúe como facilitador metodológico.
-**Qué se implementa:** Flujo guiado, Preguntas inteligentes, Propuestas de pasos.
+### 🟢 Fase 5 — Guía conversacional del proceso KDD y Memoria Avanzada
+**Objetivo:** Que el sistema actúe como facilitador metodológico con memoria persistente.
+**Qué se implementa:** 
+- Flujo guiado, Preguntas inteligentes, Propuestas de pasos.
+- Sustitución del Session Manager virtual por **Checkpointers de LangGraph** (SqliteSaver/PostgresSaver) para ganar persistencia nativa de hilos, capacidad de *Time Travel* (volver atrás en análisis) e interrupciones dinámicas (*Human-in-the-loop*).
 
 ### 🟢 Fase 6 — Ejecución de análisis exploratorio automático (EDA ampliado)
 **Objetivo:** EDA profundo generado dinámicamente.
 **Capacidades:** Estadística descriptiva a demanda, Correlaciones avanzadas, Outliers dinámicos por el Sandbox.
 
 ### 🟢 Fase 7 — Agente Generador y Linaje de Datos con MinIO
-**Objetivo:** Construir pipeline reproducible y versionado de Data.
-**Qué incluye:** Nodos capaces the inyectar código Pandas real, Tracking en el `KDDState` y volcado the datos mutables a Buckets de MinIO.
+**Objetivo:** Construir un pipeline reproducible y centralizado de artefactos.
+**Qué incluye:** 
+- Almacenamiento físico de archivos (gráficos, CSVs procesados, modelos) en Buckets de **MinIO (S3)**.
+- **KDDState tracking**: Inyección de metadatos ricos en el estado global para que el Dashboad Final o los agentes los consuman.
+
+**Estructura del Estado de Artefactos:**
+```python
+class KDDArtifact(TypedDict):
+    nombre_artefacto: str
+    breve_descripcion: str
+    s3_path: str          # Ej: s3://kdd-artifacts/session_123/eda/correlaciones.png
+    fase_generacion: str  # Ej: '4_eda', '5_modelado'
+    tipo: str             # Ej: 'plot', 'dataset_limpio', 'model_pkl'
+```
+*Mecánica:* El Sandbox o el Agente sube el archivo a MinIO y añade un objeto `KDDArtifact` a la lista `state["artifacts"]`. Cuando se genere el Dashboard final, el LLM tendrá a su disposición el inventario completo, su descripción y su ruta directa para ensamblar interactividad.
 
 ### 🟢 Fase 8 — Modelado y descubrimiento de patrones
 **Objetivo:** Extraer conocimiento y baseline predictors.
@@ -64,9 +125,18 @@ El valor principal del sistema no radica únicamente en el dashboard final, sino
 ### 🟢 Fase 11 y 12 — Sandbox Alternativo y Robustez
 **Objetivo:** Seguridad, logging, auditoria y alternativas LangChain.
 
+### 🟢 Fase 13 — Interoperabilidad (El KDD como Servidor MCP)
+**Objetivo:** Convertir el motor analítico en un "Agente Especialista" conectable (enchufable) a otros sistemas, proyectos y herramientas LLM (Claude Desktop, Cursor, etc.).
+**Qué se implementa:** 
+- Exposición de la lógica LangGraph a través del protocolo estándar **MCP (Model Context Protocol)**.
+- El sistema ofrecerá sus capacidades (*Tools*: perfilar datos, entrenar modelos en sandbox) y su memoria (*Resources*: insights, reportes EDA) a agentes "Generalistas" externos.
+- La aplicación mantendrá una arquitectura dual: Backend REST (para humanos vía UI) + Servidor MCP (para interoperabilidad IA a IA).
+
 ---
 
 ## Historial de Versiones
-- **v0.3.0** (Actual): Fase 3 (Ingestión asíncrona y Pefilado con YData en Sandbox) y Fase 4 (UI en Streamlit con Reportes Interactivos) completadas.
+- **v0.5.0** (Actual): Fase 6 (EDA Dinámico y Sandbox Efímero) y completado final de la Fase 5 (Recarga de historial desde bases de datos vectoriales persistentes). Agente de código Python plenamente funcional, enrutamiento condicional perfecto en el Session Manager.
+- **v0.4.0**: Fase 5 (Guía conversacional y Memoria Avanzada) completada. Integración de `AsyncSqliteSaver` nativo de LangGraph para ruteo asíncrono y reordenación del flujo para IA Proactiva post-perfilado. 
+- **v0.3.0**: Fase 3 (Ingestión asíncrona y Pefilado con YData en Sandbox) y Fase 4 (UI en Streamlit con Reportes Interactivos) completadas.
 - **v0.2.0**: Infraestructura Docker y Arquitectura LangGraph completada. Carga de entornos integradas.
 - **v0.1.0**: Definición de la idea inicial, objetivos y fases del proyecto.

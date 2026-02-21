@@ -15,22 +15,22 @@ El sistema sabe en qué fase está el análisis y adapta la conversación.
 
 ## 🧬 Fases del KDD guiadas por conversación
 
-### 1️⃣ Comprensión del problema
-El sistema pregunta:
-- Qué objetivo tienes
-- Qué quieres entender
-- Qué decisiones quieres tomar
+### 1️⃣ Ingestión y Pre-análisis automático (Comprensión de Datos Inicial)
+El proceso comienza cuando el usuario sube el dataset.
+Automáticamente el sistema realiza:
+- Perfilado básico rápido
+- Calidad de datos (nulos, tipos)
+- Identificación de variables clave y posibles targets
 
-Ejemplo: ¿Quieres explorar patrones, hacer predicción o evaluar hipótesis?
+Explica: *El dataset tiene 32 variables, con valores faltantes en 3 columnas...*
 
-### 2️⃣ Comprensión de los datos
-Automáticamente:
-- Perfilado
-- Calidad
-- Variables clave
-- Posibles targets
+### 2️⃣ Definición del problema y Trazado de Objetivos (IA Proactiva)
+Basándose en el pre-análisis anterior, el sistema actúa proactivamente. No solo presenta los datos, sino que **da una visión del problema**:
+- Indica qué objetivos asume que se pueden conseguir con esos datos.
+- Pregunta al usuario por sus intenciones reales para alinear el objetivo.
+- Ofrece una guía de los próximos pasos.
 
-Explica: El dataset tiene 32 variables, con valores faltantes en 3 columnas…
+Ejemplo: *Veo que tienes una variable 'Churn' muy desbalanceada. Podríamos predecir la fuga de clientes. ¿Es este tu objetivo principal o solo quieres explorar patrones?*
 
 ### 3️⃣ Preparación de datos
 Propone:
@@ -107,6 +107,20 @@ Análisis incremental
 Síntesis
   ↓
 Dashboard generator
+
+## 🔌 El KDD como Motor Central (Servidor MCP)
+
+El objetivo final del sistema trasciende a su propia interfaz de usuario. Está diseñado para ser un **cerebro analítico interoperable**. En la fase final, el proyecto expondrá toda su inteligencia (el Grafo LangGraph y el Sandbox seguro) a través del **Model Context Protocol (MCP)**.
+
+En lugar de ser solo una aplicación web aislada (Streamlit + FastAPI), el KDD actuará como un **Servidor MCP**.
+
+¿Qué permite esto?
+- **Exposición como Tools:** Agentes externos (ej: Claude Desktop, Cursor, Asistentes de otros proyectos) podrán solicitar al KDD que ejecute perfiles de datos, limpiezas o entrenamientos de modelos delegando la tarea en nuestro Sandbox. Ejemplo: `ejecutar_eda_avanzado(dataset.csv)`.
+- **Exposición como Resources:** Nuestro sistema compartirá su memoria (el Estado KDD) en formato estándar para que otros sistemas lean los *insights* extraídos y los reportes generados sin intervención humana.
+
+**Arquitectura final:**
+1. Interfaz Humana: `UI Streamlit -> FastAPI REST -> LangGraph KDD`
+2. Interfaz Inter-Agentes (M2M): `Cliente MCP Externo -> Servidor MCP (KDD) -> LangGraph KDD`
 
 ## 🧩 El dashboard como artefacto vivo
 

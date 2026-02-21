@@ -13,9 +13,10 @@ RUN pip install --no-cache-dir \
     numpy==1.26.4 \
     scikit-learn==1.4.2 \
     matplotlib==3.8.4 \
-    seaborn==0.13.2 \
-    scipy==1.13.0 \
-    statsmodels==0.14.2
+    seaborn==0.12.2 \
+    scipy==1.11.4 \
+    statsmodels==0.14.2 \
+    ydata-profiling==4.7.0
 
 # Creamos un usuario sin privilegios para ejecutar el código
 RUN useradd -m -s /bin/bash sandboxuser
